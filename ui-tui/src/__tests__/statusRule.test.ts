@@ -113,8 +113,31 @@ describe('busyIndicatorWidth', () => {
   })
 
   it('reserves room for the elapsed-time tail only when a turn is timed', () => {
-    for (const style of ['kaomoji', 'emoji', 'ascii', 'unicode'] as const) {
+    for (const style of ['kaomoji', 'emoji', 'ascii', 'symbols', 'unicode'] as const) {
       expect(busyIndicatorWidth(style, true)).toBeGreaterThan(busyIndicatorWidth(style, false))
+    }
+  })
+
+  it('reserves only the mark for symbols when there is no phase to show', () => {
+    // A bare status mark — no verb, no phase, so it is as slim as the
+    // verb-less unicode spinner rather than the wide kaomoji face.
+    expect(busyIndicatorWidth('symbols', false, '')).toBeLessThan(busyIndicatorWidth('kaomoji', false))
+  })
+
+  it('grows the symbols reservation with the phase it has to show', () => {
+    expect(busyIndicatorWidth('symbols', false, 'running…')).toBeGreaterThan(busyIndicatorWidth('symbols', false, ''))
+  })
+
+  it('caps the symbols reservation so a long phase cannot crush model │ ctx', () => {
+    const capped = busyIndicatorWidth('symbols', false, 'x'.repeat(40))
+
+    expect(busyIndicatorWidth('symbols', false, 'x'.repeat(400))).toBe(capped)
+    expect(capped).toBeLessThan(24)
+  })
+
+  it('leaves the animated styles indifferent to the phase text', () => {
+    for (const style of ['kaomoji', 'emoji', 'ascii', 'unicode'] as const) {
+      expect(busyIndicatorWidth(style, true, 'x'.repeat(200))).toBe(busyIndicatorWidth(style, true))
     }
   })
 })

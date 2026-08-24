@@ -132,11 +132,11 @@ export HERMES_TUI_THEME=light
 
 ## 忙碌指示器样式
 
-状态栏忙碌指示器可插拔——默认在 agent 工作期间每 2.5 秒轮换一次 Hermes 的 kawaii 表情调色板。通过配置或 `/indicator` 斜杠命令选择不同样式：
+状态栏忙碌指示器可插拔。默认样式 `symbols` 不含任何动画：它以静态标记显示当前轮次的状态（`●` 工作中、`◆` 等待你的输入、`■` 正在中断、`◌` 会话启动中），旁边是实时阶段文本与已用时间，因此运行中的轮次不会逐帧重绘状态栏。动画样式仍然保留——`kaomoji` 每 2.5 秒轮换一次 Hermes 的 kawaii 表情调色板，`emoji` / `unicode` / `ascii` 则是旋转指示器。通过配置或 `/indicator` 斜杠命令选择：
 
 ```yaml
 display:
-  tui_status_indicator: kaomoji   # kaomoji | emoji | unicode | ascii
+  tui_status_indicator: symbols   # symbols | kaomoji | emoji | unicode | ascii
 ```
 
 或在会话中：`/indicator emoji`（等）。各样式附带匹配的字形宽度，轮换时状态栏其余部分不会抖动。

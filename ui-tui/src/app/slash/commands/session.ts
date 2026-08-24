@@ -467,7 +467,7 @@ export const sessionCommands: SlashCommand[] = [
   },
 
   {
-    help: 'pick the busy indicator: kaomoji (default), emoji, unicode (braille), or ascii',
+    help: 'pick the busy indicator: symbols (default, static), kaomoji, emoji, unicode (braille), or ascii',
     name: 'indicator',
     usage: `/indicator [${INDICATOR_STYLES.join('|')}]`,
     run: (arg, ctx) => {

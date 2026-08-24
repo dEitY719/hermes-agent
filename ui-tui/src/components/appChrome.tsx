@@ -37,9 +37,62 @@ const ASCII_FRAMES = ['|', '/', '-', '\\']
 // at frame rates closer to their authored interval.
 const SPINNER_TICK_MS = 100
 
+// Static status marks for the `symbols` style.  Every other style animates,
+// which means a re-render of the whole status rule per frame; this one trades
+// the motion for a mark that stands for the phase, so the rule only repaints
+// when the phase (or the elapsed clock) actually changes.
+//
+// The phase vocabulary is open-ended — `setStatus` in createGatewayEventHandler
+// forwards gateway values and tool briefs verbatim — so this matches keywords
+// in order and falls through to the working mark rather than enumerating.
+const WORKING_MARK = '●'
+
+const STATUS_MARKS: Array<[RegExp, string]> = [
+  [/approval|needed|waiting for input|password/, '◆'], // waiting on the human
+  [/interrupt/, '■'], // interrupt in flight
+  [/resuming|recovering|forging|setup|summoning|startup/, '◌'] // session coming up
+]
+
+const statusMark = (phase: string): string => {
+  const p = phase.toLowerCase()
+
+  return STATUS_MARKS.find(([pattern]) => pattern.test(p))?.[1] ?? WORKING_MARK
+}
+
+// Bounded display width for the phase label so a long tool brief can't shove
+// `model │ ctx` off a narrow terminal.  Truncation happens here rather than in
+// the JSX so what renders and what `busyIndicatorWidth` reserves can't drift.
+const PHASE_MAX_WIDTH = 18
+
+const truncatePhase = (phase: string): string => {
+  const trimmed = phase.trim()
+
+  if (stringWidth(trimmed) <= PHASE_MAX_WIDTH) {
+    return trimmed
+  }
+
+  let out = ''
+
+  for (const ch of trimmed) {
+    if (stringWidth(out + ch) > PHASE_MAX_WIDTH - 1) {
+      break
+    }
+
+    out += ch
+  }
+
+  return `${out}…`
+}
+
 interface IndicatorRender {
   frame: string
-  intervalMs: number
+  // `null` means the style is static: FaceTicker arms no glyph timer at all,
+  // so a running turn costs zero per-frame re-renders.
+  intervalMs: null | number
+  // Text for the slot the rotating verb would occupy.  `symbols` puts the live
+  // turn phase there — the read-out the animated styles hide behind the
+  // spinner — while the animated styles leave it undefined.
+  label?: string
   // When false, FaceTicker hides the rotating verb and just shows the
   // glyph + duration.  Lets `unicode` stay minimal while the other
   // styles keep the verb-rotation flavour users associate with the
@@ -47,7 +100,11 @@ interface IndicatorRender {
   showVerb: boolean
 }
 
-const renderIndicator = (style: IndicatorStyle, tick: number): IndicatorRender => {
+const renderIndicator = (style: IndicatorStyle, tick: number, phase = ''): IndicatorRender => {
+  if (style === 'symbols') {
+    return { frame: statusMark(phase), intervalMs: null, label: truncatePhase(phase), showVerb: false }
+  }
+
   if (style === 'kaomoji') {
     return { frame: FACES[tick % FACES.length] ?? '', intervalMs: FACE_TICK_MS, showVerb: true }
   }
@@ -83,6 +140,13 @@ const renderIndicator = (style: IndicatorStyle, tick: number): IndicatorRender =
 const KAOMOJI_FRAME_WIDTH = FACES.reduce((max, f) => Math.max(max, stringWidth(f)), 1)
 const EMOJI_FRAME_WIDTH = EMOJI_FRAMES.reduce((max, f) => Math.max(max, stringWidth(f)), 1)
 
+// The status marks are East Asian *Ambiguous* width, so they render two
+// columns wide on CJK-configured terminals.  Measure rather than assume 1.
+const MARK_WIDTH = [WORKING_MARK, ...STATUS_MARKS.map(([, mark]) => mark)].reduce(
+  (max, mark) => Math.max(max, stringWidth(mark)),
+  1
+)
+
 const indicatorFrameWidth = (style: IndicatorStyle): number => {
   if (style === 'kaomoji') {
     return KAOMOJI_FRAME_WIDTH
@@ -90,6 +154,10 @@ const indicatorFrameWidth = (style: IndicatorStyle): number => {
 
   if (style === 'emoji') {
     return EMOJI_FRAME_WIDTH
+  }
+
+  if (style === 'symbols') {
+    return MARK_WIDTH
   }
 
   // 'ascii' and 'unicode' are single-column glyphs.
@@ -107,19 +175,30 @@ export const MAX_DURATION_WIDTH = Math.max(
 
 // Display width to reserve for the busy indicator so its verb + elapsed-time
 // tail can't shove the model off-screen on narrow terminals. Style-aware:
-// `unicode` is a bare 1-col braille spinner with no verb, while kaomoji/emoji/
-// ascii add a fixed-width verb; any style adds a bounded elapsed-time tail.
+// `unicode` is a bare 1-col braille spinner with no verb, kaomoji/emoji/ascii
+// add a fixed-width verb, and `symbols` adds the (already truncated) phase;
+// any style adds a bounded elapsed-time tail.
 // Mirrors FaceTicker's `frame + verbSegment + durationSegment` layout.
-export const busyIndicatorWidth = (style: IndicatorStyle, hasDuration: boolean): number => {
-  const { showVerb } = renderIndicator(style, 0)
-  const verb = showVerb ? 1 + VERB_PAD_LEN : 0
+export const busyIndicatorWidth = (style: IndicatorStyle, hasDuration: boolean, phase = ''): number => {
+  const { label, showVerb } = renderIndicator(style, 0, phase)
+  const verb = showVerb ? 1 + VERB_PAD_LEN : label ? 1 + stringWidth(label) : 0
   // ` · ` plus the bounded clock (e.g. `59m 59s`).
   const duration = hasDuration ? stringWidth(' · ') + MAX_DURATION_WIDTH : 0
 
   return indicatorFrameWidth(style) + verb + duration
 }
 
-function FaceTicker({ color, startedAt, style }: { color: string; startedAt?: null | number; style: IndicatorStyle }) {
+function FaceTicker({
+  color,
+  phase = '',
+  startedAt,
+  style
+}: {
+  color: string
+  phase?: string
+  startedAt?: null | number
+  style: IndicatorStyle
+}) {
   const [tick, setTick] = useState(() => Math.floor(Math.random() * 1000))
   const [verbTick, setVerbTick] = useState(() => Math.floor(Math.random() * VERBS.length))
   const [now, setNow] = useState(() => Date.now())
@@ -129,7 +208,7 @@ function FaceTicker({ color, startedAt, style }: { color: string; startedAt?: nu
   // `/indicator` switch re-arms the interval (and skips the verb timer
   // for verb-less styles like `unicode`) without leaving the previous
   // timer dangling.
-  const { intervalMs, showVerb } = renderIndicator(style, 0)
+  const { intervalMs, showVerb } = renderIndicator(style, 0, phase)
 
   useEffect(() => {
     // An overlay is painted OVER the status rule (the modal widget slot, or a
@@ -145,25 +224,31 @@ function FaceTicker({ color, startedAt, style }: { color: string; startedAt?: nu
 
     setNow(Date.now())
 
-    const glyph = setInterval(() => setTick(n => n + 1), intervalMs)
-    const clock = setInterval(() => setNow(Date.now()), 1000)
-    // Verb timer is gated on `showVerb` — `unicode` style hides the verb
-    // entirely, so cycling `verbTick` would be an avoidable re-render.
+    // Glyph timer is gated on `intervalMs` — a static style like `symbols`
+    // has no frames to advance, so arming it would be a re-render per frame
+    // that changes nothing on screen.
+    const glyph = intervalMs === null ? null : setInterval(() => setTick(n => n + 1), intervalMs)
+    // Nothing renders the elapsed tail when the turn isn't timed, so the
+    // clock has nothing to advance either.
+    const clock = startedAt == null ? null : setInterval(() => setNow(Date.now()), 1000)
+    // Verb timer is gated on `showVerb` — `unicode` and `symbols` hide the
+    // verb entirely, so cycling `verbTick` would be an avoidable re-render.
     const verb = showVerb ? setInterval(() => setVerbTick(n => n + 1), FACE_TICK_MS) : null
 
     return () => {
-      clearInterval(glyph)
-      clearInterval(clock)
-
-      if (verb !== null) {
-        clearInterval(verb)
+      for (const timer of [glyph, clock, verb]) {
+        if (timer !== null) {
+          clearInterval(timer)
+        }
       }
     }
-  }, [intervalMs, isOccluded, showVerb])
+  }, [intervalMs, isOccluded, showVerb, startedAt])
 
-  const { frame } = renderIndicator(style, tick)
+  const { frame, label } = renderIndicator(style, tick, phase)
   const verb = VERBS[verbTick % VERBS.length] ?? ''
-  const verbSegment = showVerb ? ` ${padVerb(verb)}` : ''
+  // `symbols` puts the live phase where the rotating verb would go; the
+  // animated styles keep the verb and leave `label` undefined.
+  const verbSegment = showVerb ? ` ${padVerb(verb)}` : label ? ` ${label}` : ''
   // Leading space keeps a gap between the frame and the duration when the
   // verb segment is hidden (e.g. `unicode` spinner style).  When the verb
   // IS shown, its trailing padding already provides the gap, so the extra
@@ -525,10 +610,11 @@ export function StatusRule({
   // Width of the must-keep left segments (indicator + model + context). They
   // are pinned (never shrink) and reserved so the cwd/branch on the right
   // yields first. The busy face width depends on the active /indicator style
-  // (kaomoji is wide + verb; unicode is a bare 1-col spinner). When a notice
-  // occupies the slot it reserves only `noticeReserve` (it shrinks/truncates).
+  // (kaomoji is wide + verb; unicode is a bare 1-col spinner; symbols is a mark
+  // + the truncated phase). When a notice occupies the slot it reserves only
+  // `noticeReserve` (it shrinks/truncates).
   const slotWidth = busy
-    ? busyIndicatorWidth(indicatorStyle, turnStartedAt != null)
+    ? busyIndicatorWidth(indicatorStyle, turnStartedAt != null, status)
     : showNotice
       ? noticeReserve
       : stringWidth(status)
@@ -638,7 +724,7 @@ export function StatusRule({
             </Text>
           ) : null}
           {busy ? (
-            <FaceTicker color={statusColor} startedAt={turnStartedAt} style={indicatorStyle} />
+            <FaceTicker color={statusColor} phase={status} startedAt={turnStartedAt} style={indicatorStyle} />
           ) : showNotice ? null : (
             <Text color={statusColor} wrap="truncate-end">
               {status}

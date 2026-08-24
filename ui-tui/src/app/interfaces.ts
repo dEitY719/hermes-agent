@@ -71,9 +71,11 @@ export interface Notice {
 // derived from this tuple so adding/removing a style only touches one
 // line — `useConfigSync` (validation) and `session.ts` (slash arg
 // validation + usage hint) both import it.
-export const INDICATOR_STYLES = ['ascii', 'emoji', 'kaomoji', 'unicode'] as const
+export const INDICATOR_STYLES = ['ascii', 'emoji', 'kaomoji', 'symbols', 'unicode'] as const
 export type IndicatorStyle = (typeof INDICATOR_STYLES)[number]
-export const DEFAULT_INDICATOR_STYLE: IndicatorStyle = 'kaomoji'
+// `symbols` is the default because it is the only style that animates nothing:
+// a running turn costs no per-frame re-render of the status rule.
+export const DEFAULT_INDICATOR_STYLE: IndicatorStyle = 'symbols'
 
 export interface SelectionApi {
   captureScrolledRows: (firstRow: number, lastRow: number, side: 'above' | 'below') => void
