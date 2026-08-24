@@ -282,7 +282,7 @@ hermes uninstall            Uninstall Hermes
 /busy [sub]          Control what Enter does while Hermes is working (CLI)
                      (subcommands: queue, steer, interrupt, status)
 /indicator [style]   Pick the TUI busy-indicator style (CLI)
-                     (styles: kaomoji, emoji, unicode, ascii)
+                     (styles: ascii, emoji, kaomoji, symbols, unicode)
 /footer [on|off]     Toggle gateway runtime-metadata footer on final replies
 /skin [name]         Change theme (CLI)
 /statusbar           Toggle status bar (CLI)

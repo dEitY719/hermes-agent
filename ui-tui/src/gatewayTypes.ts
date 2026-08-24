@@ -104,10 +104,10 @@ export interface ConfigDisplayConfig {
   /** Legacy alias for display.mouse_tracking. */
   tui_mouse?: boolean | null | number | string
   // Forward-compat: backend may send styles this client doesn't know yet —
-  // `normalizeIndicatorStyle` falls back to 'kaomoji' for those — but the
-  // wire type is documented as `string` so consumers don't get a false
-  // narrowing-and-autocomplete contract on a value that requires runtime
-  // validation anyway.
+  // `normalizeIndicatorStyle` falls back to `DEFAULT_INDICATOR_STYLE` for
+  // those — but the wire type is documented as `string` so consumers don't
+  // get a false narrowing-and-autocomplete contract on a value that requires
+  // runtime validation anyway.
   tui_status_indicator?: string
   tui_statusbar?: 'bottom' | 'off' | 'on' | 'top' | boolean
   /** Theme mode pin: 'light' / 'dark' beat background auto-detection; 'auto'
