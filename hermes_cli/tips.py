@@ -2,6 +2,8 @@
 
 import random
 
+from hermes_constants import INDICATOR_STYLES
+
 
 # ---------------------------------------------------------------------------
 # Tip corpus — one-liners covering slash commands, CLI flags, config,
@@ -422,7 +424,7 @@ TIPS = [
     '/toolsets lists every available toolset so you know what -t/--toolsets accepts.',
     '/voice tts toggles TTS-only mode — agent replies out loud but you still type your prompts.',
     '/reload-skills re-scans ~/.hermes/skills/ so drop-in skills appear without restarting the session.',
-    '/indicator kaomoji|emoji|unicode|ascii picks the TUI busy-indicator style shown during agent runs.',
+    f"/indicator {'|'.join(INDICATOR_STYLES)} picks the TUI busy-indicator style shown during agent runs.",
     '/debug uploads a support bundle (system info + logs) and returns shareable links — works in chat too.',
 
     # --- CLI Subcommands & Flags ---

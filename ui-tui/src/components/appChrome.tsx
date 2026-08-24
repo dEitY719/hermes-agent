@@ -4,7 +4,7 @@ import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } 
 import unicodeSpinners from 'unicode-animations'
 
 import { $delegationState } from '../app/delegationStore.js'
-import type { BatteryInfo, IndicatorStyle, Notice } from '../app/interfaces.js'
+import { type BatteryInfo, DEFAULT_INDICATOR_STYLE, type IndicatorStyle, type Notice } from '../app/interfaces.js'
 import { $isStatusRuleOccluded } from '../app/overlayStore.js'
 import { useTurnSelector } from '../app/turnStore.js'
 import { DEV_CREDITS_MODE } from '../config/env.js'
@@ -48,16 +48,12 @@ const SPINNER_TICK_MS = 100
 const WORKING_MARK = '●'
 
 const STATUS_MARKS: Array<[RegExp, string]> = [
-  [/approval|needed|waiting for input|password/, '◆'], // waiting on the human
-  [/interrupt/, '■'], // interrupt in flight
-  [/resuming|recovering|forging|setup|summoning|startup/, '◌'] // session coming up
+  [/approval|needed|waiting for input|password/i, '◆'], // waiting on the human
+  [/interrupt/i, '■'], // interrupt in flight
+  [/resuming|recovering|forging|setup|summoning|startup/i, '◌'] // session coming up
 ]
 
-const statusMark = (phase: string): string => {
-  const p = phase.toLowerCase()
-
-  return STATUS_MARKS.find(([pattern]) => pattern.test(p))?.[1] ?? WORKING_MARK
-}
+const statusMark = (phase: string): string => STATUS_MARKS.find(([pattern]) => pattern.test(phase))?.[1] ?? WORKING_MARK
 
 // Bounded display width for the phase label so a long tool brief can't shove
 // `model │ ctx` off a narrow terminal.  Truncation happens here rather than in
@@ -94,9 +90,9 @@ interface IndicatorRender {
   // spinner — while the animated styles leave it undefined.
   label?: string
   // When false, FaceTicker hides the rotating verb and just shows the
-  // glyph + duration.  Lets `unicode` stay minimal while the other
-  // styles keep the verb-rotation flavour users associate with the
-  // running… status.
+  // glyph + duration (plus `label`, when the style supplies one).  Lets
+  // `unicode` and `symbols` stay minimal while the animated styles keep the
+  // verb-rotation flavour users associate with the running… status.
   showVerb: boolean
 }
 
@@ -190,12 +186,12 @@ export const busyIndicatorWidth = (style: IndicatorStyle, hasDuration: boolean, 
 
 function FaceTicker({
   color,
-  phase = '',
+  phase,
   startedAt,
   style
 }: {
   color: string
-  phase?: string
+  phase: string
   startedAt?: null | number
   style: IndicatorStyle
 }) {
@@ -204,11 +200,12 @@ function FaceTicker({
   const [now, setNow] = useState(() => Date.now())
   const isOccluded = useStore($isStatusRuleOccluded)
 
-  // Pre-compute cadence + verb-visibility for the active style so an
-  // `/indicator` switch re-arms the interval (and skips the verb timer
-  // for verb-less styles like `unicode`) without leaving the previous
-  // timer dangling.
-  const { intervalMs, showVerb } = renderIndicator(style, 0, phase)
+  // One render pass per paint: `intervalMs` / `showVerb` are tick-independent
+  // for every style, so the same result drives both the timer effect below and
+  // the JSX.  Reading cadence here also means an `/indicator` switch re-arms
+  // the interval (and skips the verb timer for verb-less styles like
+  // `unicode`) without leaving the previous timer dangling.
+  const { frame, intervalMs, label, showVerb } = renderIndicator(style, tick, phase)
 
   useEffect(() => {
     // An overlay is painted OVER the status rule (the modal widget slot, or a
@@ -244,10 +241,7 @@ function FaceTicker({
     }
   }, [intervalMs, isOccluded, showVerb, startedAt])
 
-  const { frame, label } = renderIndicator(style, tick, phase)
   const verb = VERBS[verbTick % VERBS.length] ?? ''
-  // `symbols` puts the live phase where the rotating verb would go; the
-  // animated styles keep the verb and leave `label` undefined.
   const verbSegment = showVerb ? ` ${padVerb(verb)}` : label ? ` ${label}` : ''
   // Leading space keeps a gap between the frame and the duration when the
   // verb segment is hidden (e.g. `unicode` spinner style).  When the verb
@@ -559,7 +553,7 @@ export function StatusRule({
   model,
   modelFast,
   modelReasoningEffort,
-  indicatorStyle = 'kaomoji',
+  indicatorStyle = DEFAULT_INDICATOR_STYLE,
   notice,
   usage,
   bgCount,
