@@ -174,11 +174,11 @@ export HERMES_TUI_THEME=light
 
 ## Busy indicator styles
 
-The status-bar busy indicator is pluggable — the default rotates Hermes' kawaii face palette every 2.5 seconds during agent work. Pick a different style via config or the `/indicator` slash command:
+The status-bar busy indicator is pluggable. The default, `symbols`, animates nothing: it shows a static mark for what the turn is doing (`●` working, `◆` waiting on you, `■` interrupting, `◌` session coming up) next to the live phase and the elapsed clock, so a running turn never repaints the status rule frame by frame. The animated styles are still there — `kaomoji` rotates Hermes' kawaii face palette every 2.5 seconds, and `emoji` / `unicode` / `ascii` are spinners. Pick one via config or the `/indicator` slash command:
 
 ```yaml
 display:
-  tui_status_indicator: kaomoji   # kaomoji | emoji | unicode | ascii
+  tui_status_indicator: symbols   # symbols | kaomoji | emoji | unicode | ascii
 ```
 
 Or in-session: `/indicator emoji` (etc.). Styles ship with matched glyph widths so the rest of the status bar doesn't jitter on rotation.

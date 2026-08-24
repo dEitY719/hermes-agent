@@ -1428,9 +1428,10 @@ DEFAULT_CONFIG = {
         # responses, log lines, tool outputs, or slash-command descriptions.
         # Supported: en, zh, ja, de, es, fr, tr, uk.  Unknown values fall back to en.
         "language": "en",
-        # TUI busy indicator style: kaomoji (default), emoji, unicode (braille
-        # spinner), or ascii.  Live-swappable via `/indicator <style>`.
-        "tui_status_indicator": "kaomoji",
+        # TUI busy indicator style: symbols (default — static status marks, no
+        # animation and so no per-frame re-render), kaomoji, emoji, unicode
+        # (braille spinner), or ascii.  Live-swappable via `/indicator <style>`.
+        "tui_status_indicator": "symbols",
         # Seconds between prompt_toolkit redraws in the classic CLI when idle.
         # Default 1.0 keeps the wall-clock status-bar read-outs (idle-since-
         # last-turn) ticking and keeps the bottom chrome alive during idle —

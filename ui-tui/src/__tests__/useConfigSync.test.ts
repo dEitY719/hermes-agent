@@ -301,6 +301,7 @@ describe('normalizeIndicatorStyle', () => {
     expect(normalizeIndicatorStyle('emoji')).toBe('emoji')
     expect(normalizeIndicatorStyle('unicode')).toBe('unicode')
     expect(normalizeIndicatorStyle('ascii')).toBe('ascii')
+    expect(normalizeIndicatorStyle('symbols')).toBe('symbols')
   })
 
   it('trims and lowercases input', () => {
@@ -308,12 +309,12 @@ describe('normalizeIndicatorStyle', () => {
     expect(normalizeIndicatorStyle('UNICODE')).toBe('unicode')
   })
 
-  it('defaults to kaomoji for missing/unknown values', () => {
-    expect(normalizeIndicatorStyle(undefined)).toBe('kaomoji')
-    expect(normalizeIndicatorStyle(null)).toBe('kaomoji')
-    expect(normalizeIndicatorStyle('')).toBe('kaomoji')
-    expect(normalizeIndicatorStyle('sparkle')).toBe('kaomoji')
-    expect(normalizeIndicatorStyle(42)).toBe('kaomoji')
+  it('defaults to symbols for missing/unknown values', () => {
+    expect(normalizeIndicatorStyle(undefined)).toBe('symbols')
+    expect(normalizeIndicatorStyle(null)).toBe('symbols')
+    expect(normalizeIndicatorStyle('')).toBe('symbols')
+    expect(normalizeIndicatorStyle('sparkle')).toBe('symbols')
+    expect(normalizeIndicatorStyle(42)).toBe('symbols')
   })
 })
 
@@ -358,14 +359,14 @@ describe('applyDisplay → tui_status_indicator', () => {
     expect($uiState.get().indicatorStyle).toBe('unicode')
   })
 
-  it('falls back to kaomoji default when missing or invalid', () => {
+  it('falls back to the symbols default when missing or invalid', () => {
     const setBell = vi.fn()
 
     applyDisplay({ config: { display: {} } }, setBell)
-    expect($uiState.get().indicatorStyle).toBe('kaomoji')
+    expect($uiState.get().indicatorStyle).toBe('symbols')
 
     applyDisplay({ config: { display: { tui_status_indicator: 'rainbow' } } }, setBell)
-    expect($uiState.get().indicatorStyle).toBe('kaomoji')
+    expect($uiState.get().indicatorStyle).toBe('symbols')
   })
 })
 
