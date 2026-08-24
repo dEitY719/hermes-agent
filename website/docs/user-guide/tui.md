@@ -181,7 +181,7 @@ display:
   tui_status_indicator: symbols   # symbols | kaomoji | emoji | unicode | ascii
 ```
 
-Or in-session: `/indicator emoji` (etc.). Styles ship with matched glyph widths so the rest of the status bar doesn't jitter on rotation.
+Or in-session: `/indicator emoji` (etc.). The animated styles ship with matched glyph widths so the rest of the status bar doesn't jitter as their frames rotate. `symbols` has no rotation to absorb, but it does show the live phase, so its slot is sized to that (truncated at a fixed budget) — the low-priority tail segments can come and go as the phase text changes length.
 
 ## Auto-resume
 
