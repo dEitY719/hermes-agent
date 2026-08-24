@@ -77,6 +77,18 @@ const busyProps = (status: string): StatusRuleProps => ({
 // stdout stub before we read it back.
 const flush = () => new Promise(resolve => setTimeout(resolve, 20))
 
+/**
+ * The mark FaceTicker actually painted, read straight off the frame so the
+ * assertion doesn't depend on how the phase label was truncated.
+ */
+const markOf = async (status: string) => {
+  const rule = mount(busyProps(status))
+
+  await flush()
+
+  return /[●◆■◌]/.exec(rule.output())?.[0] ?? ''
+}
+
 /** Delays of every interval armed while the spy was installed. */
 const armedDelays = (spy: IntervalSpy) => spy.mock.calls.map(call => call[1])
 
@@ -178,5 +190,42 @@ describe('symbols indicator — static status marks', () => {
 
     expect(rule.output()).toContain('●')
     expect(rule.output()).not.toContain('corpus')
+  })
+})
+
+describe('symbols indicator — mark matching is anchored, not substring', () => {
+  // The phase slot also carries tool briefs verbatim, so a mark must not fire
+  // on a word that merely appears somewhere inside arbitrary English.
+  it.each([
+    ['installing needed deps', '●'],
+    ['approval workflow docs', '●'],
+    ['password rotation run', '●'],
+    ['reading interrupt_handler', '●'],
+    ['reading pkg setup notes', '●'],
+    ['grep resuming in logs', '●']
+  ])('leaves %j on the working mark', async (phase, expected) => {
+    expect(await markOf(phase)).toBe(expected)
+  })
+
+  // …while every phase the gateway and turn controller actually author still
+  // lands on the mark that describes it.
+  it.each([
+    ['approval needed', '◆'],
+    ['sudo password needed', '◆'],
+    ['secret input needed', '◆'],
+    ['waiting for input…', '◆'],
+    ['interrupting…', '■'],
+    ['interrupted', '■'],
+    ['forging session…', '◌'],
+    ['recovering session…', '◌'],
+    ['resuming…', '◌'],
+    ['resuming most recent…', '◌'],
+    ['summoning hermes…', '◌'],
+    ['setup running…', '◌'],
+    ['setup required', '◌'],
+    ['running…', '●'],
+    ['ready', '●']
+  ])('marks the authored phase %j', async (phase, expected) => {
+    expect(await markOf(phase)).toBe(expected)
   })
 })

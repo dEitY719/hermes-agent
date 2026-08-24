@@ -43,16 +43,25 @@ const SPINNER_TICK_MS = 100
 // when the phase (or the elapsed clock) actually changes.
 //
 // The phase vocabulary is open-ended — `setStatus` in createGatewayEventHandler
-// forwards gateway values and tool briefs verbatim — so this matches keywords
-// in order and falls through to the working mark rather than enumerating.
+// forwards gateway values and tool briefs verbatim — so this matches in order
+// and falls through to the working mark rather than enumerating.
+//
+// Every pattern is anchored, and that is the whole design: an unanchored word
+// like `needed` or `password` also appears in ordinary English, so a brief such
+// as `installing needed deps` would render as "waiting on you". Anchoring keeps
+// the authored phases matching while arbitrary prose falls through to `●`.
 const WORKING_MARK = '●'
 
 const STATUS_MARKS: Array<[RegExp, string]> = [
-  [/approval|needed|waiting for input|password/i, '◆'], // waiting on the human
-  [/interrupt/i, '■'], // interrupt in flight
-  [/resuming|recovering|forging|setup|summoning|startup/i, '◌'] // session coming up
+  // `approval needed` / `sudo password needed` / `secret input needed` all end
+  // in the word; `waiting for input…` opens with its phrase.
+  [/(?:^waiting for input|needed[.…\s]*$)/i, '◆'], // waiting on the human
+  [/^interrupt/i, '■'], // `interrupting…` / `interrupted`
+  [/^(?:forging|recovering|resuming|setup|summoning)\b/i, '◌'] // session coming up
 ]
 
+// Deliberately reads the RAW phase, not the truncated label: the `$` anchor
+// above only means "the phase ends here" if nothing has been cut off it yet.
 const statusMark = (phase: string): string => STATUS_MARKS.find(([pattern]) => pattern.test(phase))?.[1] ?? WORKING_MARK
 
 // Bounded display width for the phase label so a long tool brief can't shove
