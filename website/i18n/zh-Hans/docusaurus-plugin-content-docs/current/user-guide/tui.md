@@ -139,7 +139,7 @@ display:
   tui_status_indicator: symbols   # symbols | kaomoji | emoji | unicode | ascii
 ```
 
-或在会话中：`/indicator emoji`（等）。各样式附带匹配的字形宽度，轮换时状态栏其余部分不会抖动。
+或在会话中：`/indicator emoji`（等）。各动画样式附带匹配的字形宽度，帧轮换时状态栏其余部分不会抖动。`symbols` 没有需要吸收的轮换，但它会显示实时阶段文本，因此其插槽按该文本（在固定预算处截断）计算宽度——阶段文本长度变化时，低优先级的尾部段落可能随之出现或消失。
 
 ## 自动恢复
 
